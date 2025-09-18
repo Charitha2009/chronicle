@@ -1,0 +1,9 @@
+{
+  "name": "api",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "ts-node-dev --project tsconfig.json --respawn --pretty src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  }
+}
