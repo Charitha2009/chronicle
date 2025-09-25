@@ -1,9 +1,16 @@
 {
   "name": "chronicle",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "npm run dev -w apps/web & npm run dev -w apps/api",
     "build": "npm run build -w apps/web && npm run build -w apps/api"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0"
   }
 }
