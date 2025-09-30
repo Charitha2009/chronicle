@@ -1,8 +1,9 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
+// Initialize OpenAI client only if API key is available
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+}) : null;
 
 export interface Character {
   id: number;
@@ -28,6 +29,16 @@ export class AIService {
    * Analyze characters and suggest the best genre for the story
    */
   static async suggestGenre(characters: Character[]): Promise<GenreSuggestion> {
+    // Check if OpenAI is available
+    if (!openai) {
+      console.log('OpenAI not available, using fallback genre suggestion');
+      return {
+        genre: 'adventure',
+        confidence: 0.3,
+        reasoning: 'AI service not configured - using default adventure genre'
+      };
+    }
+
     const characterDescriptions = characters.map(char => 
       `${char.name} (${char.archetype})`
     ).join(', ');
@@ -89,6 +100,20 @@ Respond with a JSON object containing:
     campaignTitle: string,
     turnIndex: number = 1
   ): Promise<StoryContent> {
+    // Check if OpenAI is available
+    if (!openai) {
+      console.log('OpenAI not available, using fallback story content');
+      return {
+        content: `Welcome to your ${genre} adventure: ${campaignTitle}!\n\nYou find yourself at the beginning of an epic journey. The world around you is filled with possibilities and danger lurks in every shadow. Your choices will shape the destiny of this tale.\n\nWhat will you do next?`,
+        hooks: [
+          "Investigate the mysterious light in the distance",
+          "Seek shelter and plan your next move", 
+          "Call out to see if anyone else is nearby"
+        ],
+        memory_summary: `Opening scene of ${campaignTitle} - players begin their ${genre} adventure`
+      };
+    }
+
     const characterDescriptions = characters.map(char => 
       `${char.name} (${char.archetype})`
     ).join(', ');
@@ -162,6 +187,20 @@ Respond with a JSON object containing:
     selectedHook: string,
     turnIndex: number
   ): Promise<StoryContent> {
+    // Check if OpenAI is available
+    if (!openai) {
+      console.log('OpenAI not available, using fallback story continuation');
+      return {
+        content: `The story continues in your ${genre} adventure. The consequences of your previous choice unfold before you, presenting new challenges and opportunities.\n\nWhat will you do next?`,
+        hooks: [
+          "Take a bold action to advance the plot",
+          "Gather more information before proceeding",
+          "Work together to overcome the current challenge"
+        ],
+        memory_summary: `Turn ${turnIndex} continuation of ${campaignTitle}`
+      };
+    }
+
     const characterDescriptions = characters.map(char => 
       `${char.name} (${char.archetype})`
     ).join(', ');
