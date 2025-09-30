@@ -396,13 +396,13 @@ app.post("/campaigns/:id/start", async (req, res) => {
   if (turnError) return res.status(400).json({ error: turnError.message });
 
   // Get characters for AI story generation
-  const { data: characters, error: charsError } = await supabase
+  const { data: characters, error: charactersError } = await supabase
     .from("characters")
     .select("id, name, archetype, avatar_url")
     .eq("campaign_id", id)
     .eq("is_locked", true);
 
-  if (charsError) return res.status(400).json({ error: charsError.message });
+  if (charactersError) return res.status(400).json({ error: charactersError.message });
   if (!characters || characters.length === 0) {
     return res.status(400).json({ error: "No locked characters found" });
   }
