@@ -3,6 +3,7 @@ import cors from "cors";
 import pino from "pino";
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+import { AIService } from "./ai-service";
 
 dotenv.config();
 const log = pino({ transport: { target: "pino-pretty" } });
@@ -39,6 +40,98 @@ app.get("/test", (_req, res) => res.json({ message: "Test endpoint works" }));
 
 app.get("/", (_req, res) => {
   res.type("text").send("Chronicle Campaign API 🚀 Try GET /health, POST /campaigns");
+});
+
+// AI-Powered Genre Selection
+app.post("/campaigns/:id/suggest-genre", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Get characters for this campaign
+    const { data: characters, error: charsError } = await supabase
+      .from("characters")
+      .select("id, name, archetype, avatar_url")
+      .eq("campaign_id", id)
+      .eq("is_locked", true);
+
+    if (charsError) return res.status(400).json({ error: charsError.message });
+    if (!characters || characters.length === 0) {
+      return res.status(400).json({ error: "No locked characters found for genre suggestion" });
+    }
+
+    // Use AI to suggest genre
+    const suggestion = await AIService.suggestGenre(characters);
+    
+    res.json(suggestion);
+  } catch (error) {
+    console.error('Error in genre suggestion:', error);
+    res.status(500).json({ error: "Failed to generate genre suggestion" });
+  }
+});
+
+// AI-Powered Story Generation
+app.post("/campaigns/:id/generate-story", async (req, res) => {
+  const { id } = req.params;
+  const { genre, turnIndex = 1, selectedHook } = req.body;
+
+  try {
+    // Get campaign details
+    const { data: campaign, error: campaignError } = await supabase
+      .from("campaigns")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (campaignError || !campaign) {
+      return res.status(400).json({ error: "Campaign not found" });
+    }
+
+    // Get characters
+    const { data: characters, error: charsError } = await supabase
+      .from("characters")
+      .select("id, name, archetype, avatar_url")
+      .eq("campaign_id", id)
+      .eq("is_locked", true);
+
+    if (charsError) return res.status(400).json({ error: charsError.message });
+    if (!characters || characters.length === 0) {
+      return res.status(400).json({ error: "No locked characters found" });
+    }
+
+    let storyContent;
+    
+    if (turnIndex === 1) {
+      // Generate opening scene
+      storyContent = await AIService.generateStoryContent(
+        characters, 
+        genre || campaign.genre, 
+        campaign.title, 
+        turnIndex
+      );
+    } else {
+      // Generate story continuation
+      const { data: previousTurns } = await supabase
+        .from("turns")
+        .select("*")
+        .eq("campaign_id", id)
+        .lt("turn_index", turnIndex)
+        .order("turn_index", { ascending: true });
+
+      storyContent = await AIService.generateStoryContinuation(
+        characters,
+        genre || campaign.genre,
+        campaign.title,
+        previousTurns || [],
+        selectedHook || "",
+        turnIndex
+      );
+    }
+
+    res.json(storyContent);
+  } catch (error) {
+    console.error('Error in story generation:', error);
+    res.status(500).json({ error: "Failed to generate story content" });
+  }
 });
 
 // 2.1 Create campaign (Host picks genre)
@@ -302,18 +395,47 @@ app.post("/campaigns/:id/start", async (req, res) => {
 
   if (turnError) return res.status(400).json({ error: turnError.message });
 
-  // Generate opening scene (simplified for now)
-  const openingContent = `Welcome to your ${campaign.genre} adventure: ${campaign.title}!
+  // Get characters for AI story generation
+  const { data: characters, error: charsError } = await supabase
+    .from("characters")
+    .select("id, name, archetype, avatar_url")
+    .eq("campaign_id", id)
+    .eq("is_locked", true);
+
+  if (charsError) return res.status(400).json({ error: charsError.message });
+  if (!characters || characters.length === 0) {
+    return res.status(400).json({ error: "No locked characters found" });
+  }
+
+  // Generate AI-powered opening scene
+  let openingContent, hooks, memorySummary;
+  
+  try {
+    const storyContent = await AIService.generateStoryContent(
+      characters, 
+      campaign.genre, 
+      campaign.title, 
+      1
+    );
+    openingContent = storyContent.content;
+    hooks = storyContent.hooks;
+    memorySummary = storyContent.memory_summary;
+  } catch (aiError) {
+    console.error('AI story generation failed, using fallback:', aiError);
+    // Fallback content
+    openingContent = `Welcome to your ${campaign.genre} adventure: ${campaign.title}!
 
 You find yourself at the beginning of an epic journey. The world around you is filled with possibilities and danger lurks in every shadow. Your choices will shape the destiny of this tale.
 
 What will you do next?`;
 
-  const hooks = [
-    "Investigate the mysterious light in the distance",
-    "Seek shelter and plan your next move", 
-    "Call out to see if anyone else is nearby"
-  ];
+    hooks = [
+      "Investigate the mysterious light in the distance",
+      "Seek shelter and plan your next move", 
+      "Call out to see if anyone else is nearby"
+    ];
+    memorySummary = `Opening scene of ${campaign.title} - players begin their ${campaign.genre} adventure`;
+  }
 
   // Create resolution for Turn 1
   const { data: resolution, error: resolutionError } = await supabase
@@ -322,7 +444,7 @@ What will you do next?`;
       turn_id: turn.id,
       content: openingContent,
       hooks: hooks,
-      memory_summary: `Opening scene of ${campaign.title} - players begin their ${campaign.genre} adventure`
+      memory_summary: memorySummary
     })
     .select()
     .single();

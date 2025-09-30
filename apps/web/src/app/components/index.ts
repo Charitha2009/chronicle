@@ -3,6 +3,7 @@ export { default as LobbyPage } from './lobby/LobbyPage';
 
 // Story Components  
 export { default as StorySelectionPage } from './story/StorySelectionPage';
+export { default as AIGenreSelectionPage } from './story/AIGenreSelectionPage';
 
 // Campaign Components
 export { default as CharacterSelectionPage } from './campaigns/CharacterSelectionPage';

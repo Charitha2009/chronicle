@@ -299,6 +299,40 @@ export default function CharacterSelection() {
           <p style={{ fontSize: 16, opacity: 0.8 }}>
             {campaign.genre} • Max {campaign.max_players} players
           </p>
+          
+          {/* AI Genre Selection Button */}
+          {characters.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <Link 
+                href={`/ai-genre-selection?campaignId=${campaignId}`}
+                style={{
+                  display: "inline-block",
+                  padding: "12px 24px",
+                  borderRadius: 8,
+                  background: "linear-gradient(45deg, #3b82f6, #1d4ed8)",
+                  color: "#ffffff",
+                  textDecoration: "none",
+                  fontSize: 16,
+                  fontWeight: 600,
+                  transition: "all 0.3s ease",
+                  boxShadow: "0 4px 15px rgba(59, 130, 246, 0.3)"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 8px 25px rgba(59, 130, 246, 0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 4px 15px rgba(59, 130, 246, 0.3)";
+                }}
+              >
+                🤖 Get AI Genre Suggestion
+              </Link>
+              <p style={{ fontSize: 14, opacity: 0.6, marginTop: 8 }}>
+                Let AI analyze your characters and suggest the perfect genre
+              </p>
+            </div>
+          )}
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40 }}>
